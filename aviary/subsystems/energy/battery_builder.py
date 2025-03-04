@@ -82,7 +82,7 @@ class BatteryBuilder(SubsystemBuilderBase):
                 'fix_initial': True,
                 'fix_final': False,
                 'lower': 0.0,
-                'ref': 1e4,
+                'ref': 1e7,
                 'defect_ref': 1e6,
                 'units': 'kJ',
                 'rate_source': Dynamic.Vehicle.Propulsion.ELECTRIC_POWER_IN_TOTAL,
