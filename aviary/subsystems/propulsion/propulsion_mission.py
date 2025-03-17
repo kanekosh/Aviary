@@ -340,12 +340,16 @@ class PropulsionSum(om.ExplicitComponent):
     def initialize(self):
         self.options.declare('num_nodes', types=int, lower=0)
         add_aviary_option(self, Aircraft.Engine.NUM_ENGINES)
+        # print('In PropulsionSum.Initialize: num_engines', self.options[Aircraft.Engine.NUM_ENGINES])
 
     def setup(self):
         nn = self.options['num_nodes']
         num_engine_type = len(
             self.options[Aircraft.Engine.NUM_ENGINES]
         )
+
+        # print('In PropulsionSums.setup: num_engines', self.options[Aircraft.Engine.NUM_ENGINES])
+        # quit()
 
         self.add_input(
             Dynamic.Vehicle.Propulsion.THRUST,
@@ -399,6 +403,9 @@ class PropulsionSum(om.ExplicitComponent):
         nn = self.options['num_nodes']
         num_engines = self.options[Aircraft.Engine.NUM_ENGINES]
 
+        # HACK
+        num_engines = [1]
+
         num_engine_type = len(num_engines)
         deriv = np.tile(num_engines, nn)
 
@@ -443,6 +450,9 @@ class PropulsionSum(om.ExplicitComponent):
 
     def compute(self, inputs, outputs):
         num_engines = self.options[Aircraft.Engine.NUM_ENGINES]
+
+        # HACK
+        num_engines = [1]
 
         thrust = inputs[Dynamic.Vehicle.Propulsion.THRUST]
         thrust_max = inputs[Dynamic.Vehicle.Propulsion.THRUST_MAX]
