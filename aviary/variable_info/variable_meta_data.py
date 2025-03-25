@@ -2129,8 +2129,7 @@ add_meta_data(
     types=(np.ndarray, int),
     multivalue=True,
     option=True,
-    # override here. Set actual number of propulsion components in my custom propulsion model
-    default_value=[1]
+    default_value=[2]
 )
 
 add_meta_data(
