@@ -6,6 +6,7 @@ import numpy as np
 
 import openmdao.api as om
 from openmdao.utils.assert_utils import assert_check_partials, assert_near_equal
+from openmdao.utils.testing_utils import use_tempdirs
 
 from aviary.interface.default_phase_info.height_energy import phase_info
 from aviary.interface.methods_for_level2 import AviaryProblem
@@ -24,6 +25,9 @@ from aviary.variable_info.enums import LegacyCode
 from aviary.variable_info.functions import setup_model_options
 from aviary.variable_info.variables import Aircraft, Dynamic, Mission, Settings
 
+from openmdao.utils.testing_utils import use_tempdirs
+
+
 FLOPS = LegacyCode.FLOPS
 GASP = LegacyCode.GASP
 
@@ -31,6 +35,7 @@ CDI_table = "subsystems/aerodynamics/flops_based/test/large_single_aisle_1_CDI_p
 CD0_table = "subsystems/aerodynamics/flops_based/test/large_single_aisle_1_CD0_polar.csv"
 
 
+@use_tempdirs
 class TabularAeroGroupFileTest(unittest.TestCase):
     # Test drag comp with data from file, structured grid
     def setUp(self):
@@ -53,6 +58,9 @@ class TabularAeroGroupFileTest(unittest.TestCase):
 
         setup_model_options(self.prob, aviary_options)
 
+        self.prob.model.set_input_defaults(Dynamic.Atmosphere.MACH,
+                                           val=0.3876, units='unitless')
+
         self.prob.setup(check=False, force_alloc_complex=True)
 
     def test_case(self):
@@ -64,7 +72,6 @@ class TabularAeroGroupFileTest(unittest.TestCase):
         )  # convert from knots to ft/s
         self.prob.set_val(Dynamic.Mission.ALTITUDE, val=10582, units='m')
         self.prob.set_val(Dynamic.Vehicle.MASS, val=80442, units='kg')
-        self.prob.set_val(Dynamic.Atmosphere.MACH, val=0.3876, units='unitless')
         # 1344.5? 'reference' vs 'calculated'?
         self.prob.set_val(Aircraft.Wing.AREA, val=1341, units='ft**2')
         # calculated from online atmospheric table
@@ -98,7 +105,7 @@ class TabularAeroGroupFileTest(unittest.TestCase):
         local_phase_info.pop('climb')
         local_phase_info.pop('descent')
 
-        prob = AviaryProblem()
+        prob = AviaryProblem(verbosity=0)
 
         prob.load_inputs(
             "subsystems/aerodynamics/flops_based/test/data/high_wing_single_aisle.csv",
@@ -127,6 +134,7 @@ class TabularAeroGroupFileTest(unittest.TestCase):
         assert_near_equal(wing_area, actual_wing_area)
 
 
+@use_tempdirs
 class TabularAeroGroupDataTest(unittest.TestCase):
     # Test tabular drag comp with training data, structured grid
     def setUp(self):
@@ -191,6 +199,9 @@ class TabularAeroGroupDataTest(unittest.TestCase):
 
         setup_model_options(self.prob, aviary_options)
 
+        self.prob.model.set_input_defaults(Dynamic.Atmosphere.MACH,
+                                           val=0.3876, units='unitless')
+
         self.prob.setup(check=False, force_alloc_complex=True)
 
     def test_case(self):
@@ -202,7 +213,6 @@ class TabularAeroGroupDataTest(unittest.TestCase):
         )  # convert from knots to ft/s
         self.prob.set_val(Dynamic.Mission.ALTITUDE, val=10582, units='m')
         self.prob.set_val(Dynamic.Vehicle.MASS, val=80442, units='kg')
-        self.prob.set_val(Dynamic.Atmosphere.MACH, val=0.3876, units='unitless')
         # 1344.5? 'reference' vs 'calculated'?
         self.prob.set_val(Aircraft.Wing.AREA, val=1341, units='ft**2')
         # calculated from online atmospheric table
@@ -362,6 +372,9 @@ class ComputedVsTabularTest(unittest.TestCase):
         )
 
         setup_model_options(prob, flops_inputs)
+
+        prob.model.set_input_defaults(Dynamic.Atmosphere.MACH,
+                                      val=0.3876, units='unitless')
 
         prob.setup(check=False, force_alloc_complex=True)
 
@@ -736,7 +749,7 @@ _design_altitudes = AviaryValues({
 
 
 if __name__ == "__main__":
-    unittest.main()
-    # test = ComputedVsTabularTest()
-    # test.setUp()
-    # test.test_case()
+    # unittest.main()
+    test = TabularAeroGroupDataTest()
+    test.setUp()
+    test.test_parameters()

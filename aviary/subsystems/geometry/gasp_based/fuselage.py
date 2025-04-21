@@ -23,8 +23,7 @@ class FuselageParameters(om.ExplicitComponent):
 
     def setup(self):
 
-        add_aviary_input(self, Aircraft.Fuselage.DELTA_DIAMETER)
-        add_aviary_input(self, Aircraft.Fuselage.PILOT_COMPARTMENT_LENGTH)
+        add_aviary_input(self, Aircraft.Fuselage.DELTA_DIAMETER, units='ft')
 
         add_aviary_output(self, Aircraft.Fuselage.AVG_DIAMETER, units='inch')
         self.add_output("cabin_height", val=0, units="ft", desc="HC: height of cabin")
@@ -67,7 +66,7 @@ class FuselageParameters(om.ExplicitComponent):
         nose_height_a = cabin_width / 12
         cabin_height_a = nose_height_a + delta_diameter
 
-        # multiple seats across
+        # multiple seats across, assuming no first class seats
         cabin_len_b = (PAX - 1) * seat_pitch / (seats_abreast * 12)
         cabin_height_b = cabin_width / 12
         nose_height_b = cabin_height_b - delta_diameter
@@ -100,17 +99,17 @@ class FuselageSize(om.ExplicitComponent):
     """
 
     def setup(self):
-        add_aviary_input(self, Aircraft.Fuselage.NOSE_FINENESS)
+        add_aviary_input(self, Aircraft.Fuselage.NOSE_FINENESS, units='unitless')
         self.add_input("nose_height", val=0, units="ft", desc="HN: height of nose")
-        add_aviary_input(self, Aircraft.Fuselage.PILOT_COMPARTMENT_LENGTH)
+        add_aviary_input(self, Aircraft.Fuselage.PILOT_COMPARTMENT_LENGTH, units='ft')
         self.add_input("cabin_len", val=0, units="ft", desc="LC: length of cabin")
-        add_aviary_input(self, Aircraft.Fuselage.TAIL_FINENESS)
+        add_aviary_input(self, Aircraft.Fuselage.TAIL_FINENESS, units='unitless')
         self.add_input("cabin_height", val=0, units="ft", desc="HC: height of cabin")
-        add_aviary_input(self, Aircraft.Fuselage.WETTED_AREA_SCALER)
+        add_aviary_input(self, Aircraft.Fuselage.WETTED_AREA_SCALER, units='unitless')
 
-        add_aviary_output(self, Aircraft.Fuselage.LENGTH)
-        add_aviary_output(self, Aircraft.Fuselage.WETTED_AREA)
-        add_aviary_output(self, Aircraft.TailBoom.LENGTH)
+        add_aviary_output(self, Aircraft.Fuselage.LENGTH, units='ft')
+        add_aviary_output(self, Aircraft.Fuselage.WETTED_AREA, units='ft**2')
+        add_aviary_output(self, Aircraft.TailBoom.LENGTH, units='ft')
 
         self.declare_partials(
             Aircraft.Fuselage.LENGTH,
@@ -150,6 +149,7 @@ class FuselageSize(om.ExplicitComponent):
         )
 
     def compute(self, inputs, outputs):
+        # length to diameter ratio of nose cone of fuselage
         LoverD_nose = inputs[Aircraft.Fuselage.NOSE_FINENESS]
         LoverD_tail = inputs[Aircraft.Fuselage.TAIL_FINENESS]
         cockpit_len = inputs[Aircraft.Fuselage.PILOT_COMPARTMENT_LENGTH]
