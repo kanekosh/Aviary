@@ -258,7 +258,7 @@ class TakeoffBrakeReleaseToDecisionSpeed(PhaseBuilderBase):
         '''
         Return a transcription object to be used by default in build_phase.
         '''
-        transcription = dm.Radau(num_segments=3, order=3, compressed=True)
+        transcription = dm.Radau(num_segments=2, order=3, compressed=True)
 
         return transcription
 
@@ -446,7 +446,8 @@ class TakeoffDecisionSpeedToRotate(PhaseBuilderBase):
             opt=False
         )
 
-        phase.add_boundary_constraint('v_over_v_stall', loc='final', lower=1.2, ref=1.2)
+        # NOTE: not sure if we need v/v_stall > 1.1 at the beginning of rotate
+        phase.add_boundary_constraint('v_over_v_stall', loc='final', lower=1.0, ref=1.0)
 
         phase.add_parameter(Dynamic.Vehicle.ANGLE_OF_ATTACK,
                             val=0.0, opt=False, units='deg')
@@ -470,7 +471,7 @@ class TakeoffDecisionSpeedToRotate(PhaseBuilderBase):
         '''
         Return a transcription object to be used by default in build_phase.
         '''
-        transcription = dm.Radau(num_segments=3, order=3, compressed=True)
+        transcription = dm.Radau(num_segments=2, order=3, compressed=True)
 
         return transcription
 
@@ -798,10 +799,13 @@ class TakeoffRotateToLiftoff(PhaseBuilderBase):
             opt=True,
             units=units,
             order=1,
-            lower=0,
+            lower=-10,
             upper=max_angle_of_attack,
             ref=max_angle_of_attack,
         )
+
+        # takeoff speed >= 1.1 v_stall
+        phase.add_boundary_constraint('v_over_v_stall', loc='final', lower=1.1, ref=1.0)
 
         phase.add_timeseries_output(
             Dynamic.Vehicle.DRAG, output_name=Dynamic.Vehicle.DRAG, units='lbf'
@@ -822,7 +826,7 @@ class TakeoffRotateToLiftoff(PhaseBuilderBase):
         '''
         Return a transcription object to be used by default in build_phase.
         '''
-        transcription = dm.Radau(num_segments=3, order=3, compressed=True)
+        transcription = dm.Radau(num_segments=2, order=3, compressed=True)
 
         return transcription
 
@@ -1117,8 +1121,9 @@ class TakeoffLiftoffToObstacle(PhaseBuilderBase):
             linear=True,
         )
 
-        phase.add_path_constraint(
-            'v_over_v_stall', lower=1.25, ref=2.0)
+        # This phase is transition + climb in the air. Initial v/v_stall >= 1.1, final v/v_stall >= 1.2
+        phase.add_path_constraint('v_over_v_stall', lower=1.1, ref=1.0)
+        phase.add_boundary_constraint('v_over_v_stall', loc='final', lower=1.2, ref=1.0)
 
         phase.add_boundary_constraint('takeoff_eom.forces_vertical', loc='initial', equals=0,
                                       ref=100000)
@@ -1129,7 +1134,7 @@ class TakeoffLiftoffToObstacle(PhaseBuilderBase):
         '''
         Return a transcription object to be used by default in build_phase.
         '''
-        transcription = dm.Radau(num_segments=5, order=3, compressed=True)
+        transcription = dm.Radau(num_segments=2, order=3, compressed=True)
 
         return transcription
 
