@@ -227,7 +227,7 @@ class TakeoffBrakeReleaseToDecisionSpeed(PhaseBuilderBase):
         )
 
         phase.add_state(
-            Dynamic.Vehicle.MASS, fix_initial=True, fix_final=False,
+            Dynamic.Vehicle.MASS, fix_initial=False, fix_final=False,
             lower=0.0, upper=1e9, ref=5e4, units='kg',
             rate_source=Dynamic.Vehicle.Propulsion.FUEL_FLOW_RATE_NEGATIVE_TOTAL,
             targets=Dynamic.Vehicle.MASS,
