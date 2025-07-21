@@ -40,6 +40,23 @@ prob.add_objective()
 
 prob.setup()
 
+# Initialize all `aircraft:*` and `mission:design:*` variables
+for var_name, val_meta in prob.aviary_inputs.items():
+    # check if var_name starts with "aircraft:"
+    if var_name.startswith('aircraft:') or var_name.startswith('mission:design:'):
+        try:
+            prob.set_val(var_name, val_meta[0], units=val_meta[1])
+            print(f'Setting {var_name} = {val_meta[0]} [{val_meta[1]}]')
+        except KeyError:
+            # print(f'Skip setting {var_name}')
+            pass
+
 prob.set_initial_guesses()
 
 prob.run_aviary_problem()
+
+import openmdao.api as om
+
+om.n2(prob, show_browser=False)
+
+print('fuel burn (lb): ', prob.model.get_val('mission:summary:fuel_burned', units='lb')[0])

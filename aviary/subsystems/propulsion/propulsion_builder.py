@@ -147,37 +147,38 @@ class CorePropulsionBuilder(PropulsionBuilderBase):
         Set expected shape of all variables that need to be vectorized for multiple
         engine types.
         """
-        num_engine_type = len(aviary_inputs.get_val(Aircraft.Engine.NUM_ENGINES))
-        params = {}
+        # num_engine_type = len(aviary_inputs.get_val(Aircraft.Engine.NUM_ENGINES))
+        # params = {}
 
-        # collect all the parameters for engines
-        for engine in self.engine_models:
-            engine_params = engine.get_parameters()
-            # for param in engine_params:
-            #     # For any parameters that need to be vectorized for multiple engines,
-            #     # apply correct shape
-            #     if param in params:
-            #         try:
-            #             shape_old = params[param]['shape'][0]
-            #         except KeyError:
-            #             # If shape is not defined yet, this is the first time there is
-            #             # a duplicate
-            #             shape_old = 1
-            #         engine_params[param]['shape'] = (shape_old + 1,)
+        # # collect all the parameters for engines
+        # for engine in self.engine_models:
+        #     engine_params = engine.get_parameters()
+        #     # for param in engine_params:
+        #     #     # For any parameters that need to be vectorized for multiple engines,
+        #     #     # apply correct shape
+        #     #     if param in params:
+        #     #         try:
+        #     #             shape_old = params[param]['shape'][0]
+        #     #         except KeyError:
+        #     #             # If shape is not defined yet, this is the first time there is
+        #     #             # a duplicate
+        #     #             shape_old = 1
+        #     #         engine_params[param]['shape'] = (shape_old + 1,)
 
-            params.update(engine_params)
+        #     params.update(engine_params)
 
-        # for any parameters that need to be vectorized for multiple engines, apply
-        # correct shape
-        engine_vars = [var for var in _get_engine_variables()]
-        for var in params:
-            if var in engine_vars:
-                # TODO shape for variables that are supposed to be vectors, like wing
-                #      engine locations
-                params[var]['shape'] = (num_engine_type,)
-                params[var]['static_target'] = True
+        # # for any parameters that need to be vectorized for multiple engines, apply
+        # # correct shape
+        # engine_vars = [var for var in _get_engine_variables()]
+        # for var in params:
+        #     if var in engine_vars:
+        #         # TODO shape for variables that are supposed to be vectors, like wing
+        #         #      engine locations
+        #         params[var]['shape'] = (num_engine_type,)
+        #         params[var]['static_target'] = True
 
-        return params
+        # return params
+        return {}
 
     # NOTE no unittests!
     def get_constraints(self):

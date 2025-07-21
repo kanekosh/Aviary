@@ -171,6 +171,32 @@ class AviaryGroup(om.Group):
                     phase.indep_states.nonlinear_solver = om.NewtonSolver(solve_subsystems=True)
                     phase.indep_states.linear_solver = om.DirectSolver(rhs_checking=True)
 
+        # Promote all inputs of the mission group that start with `aircraft:*` or `mission:design:*` to the top-level
+        for phase_name in self.options['phase_info']:
+            if phase_name not in ['pre_mission', 'post_mission']:
+                # find all inputs of the `rhs_all` group that start with `aircraft:*` or `mission:design:*`
+                rhs_group = getattr(self.traj.phases, phase_name).rhs_all
+                list_inputs = rhs_group.list_inputs(
+                    out_stream=None, includes=['aircraft:*', 'mission:design:*']
+                )
+
+                # get a list of input variables to promote
+                list_inputs_to_promote = []
+                for _, input_meta in list_inputs:
+                    # check for duplicates
+                    if input_meta['prom_name'] not in list_inputs_to_promote:
+                        list_inputs_to_promote.append(input_meta['prom_name'])
+
+                # promote those variables to the top-level
+                # TODO: check shape of the variable, and if it's not a scaler we should skip promotion?
+                for input_name in list_inputs_to_promote:
+                    print(
+                        f'Promoting {input_name} from traj.phases.{phase_name}.rhs_all to top-level'
+                    )
+                    self.promotes(
+                        'traj', inputs=[(f'{phase_name}.rhs_all.{input_name}', input_name)]
+                    )
+
     def load_inputs(
         self,
         aircraft_data,
