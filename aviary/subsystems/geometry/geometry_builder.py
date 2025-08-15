@@ -8,14 +8,13 @@ GeometryBuilderBase: the interface for a geometry subsystem builder.
 CoreGeometryBuilder : the interface for Aviary's core geometry subsystem builder
 """
 
-from aviary.interface.utils.markdown_utils import write_markdown_variable_table
-from aviary.subsystems.subsystem_builder_base import SubsystemBuilderBase
+from aviary.interface.utils import write_markdown_variable_table
 from aviary.subsystems.geometry.combined_geometry import CombinedGeometry
 from aviary.subsystems.geometry.flops_based.prep_geom import PrepGeom
 from aviary.subsystems.geometry.gasp_based.size_group import SizeGroup
-from aviary.variable_info.variables import Aircraft
+from aviary.subsystems.subsystem_builder_base import SubsystemBuilderBase
 from aviary.variable_info.enums import LegacyCode
-from aviary.variable_info.variable_meta_data import _MetaData
+from aviary.variable_info.variables import Aircraft
 
 GASP = LegacyCode.GASP
 FLOPS = LegacyCode.FLOPS
@@ -25,7 +24,7 @@ _default_name = 'geometry'
 
 class GeometryBuilderBase(SubsystemBuilderBase):
     """
-    Base geometry builder
+    Base geometry builder.
 
     Methods
     -------
@@ -52,7 +51,7 @@ class GeometryBuilderBase(SubsystemBuilderBase):
 
 class CoreGeometryBuilder(GeometryBuilderBase):
     """
-    Core geometry builder
+    Core geometry builder.
 
     Methods
     -------
@@ -100,9 +99,7 @@ class CoreGeometryBuilder(GeometryBuilderBase):
 
         if method != 'external':
             if both_geom:
-                geom_group = CombinedGeometry(
-                    code_origin_to_prioritize=code_origin_to_prioritize
-                )
+                geom_group = CombinedGeometry(code_origin_to_prioritize=code_origin_to_prioritize)
 
             elif code_origin is GASP:
                 geom_group = SizeGroup()
@@ -125,24 +122,27 @@ class CoreGeometryBuilder(GeometryBuilderBase):
         if method != 'external':
             geom_group = super().build_mission(num_nodes, aviary_inputs)
 
-        geom_group
+        return geom_group
 
     def get_parameters(self, aviary_inputs=None, phase_info=None):
         num_engine_type = len(aviary_inputs.get_val(Aircraft.Engine.NUM_ENGINES))
         params = {}
 
         for entry in Aircraft.Nacelle.__dict__:
-            if entry != "__dict__":  # cannot get attribute from mappingproxy
+            if entry != '__dict__':  # cannot get attribute from mappingproxy
                 var = getattr(Aircraft.Nacelle, entry)
                 if var in aviary_inputs:
                     if 'total' not in var:
-                        params[var] = {'shape': (num_engine_type), 'static_target': True}
+                        params[var] = {
+                            'shape': (num_engine_type),
+                            'static_target': True,
+                        }
 
         return params
 
     def report(self, prob, reports_folder, **kwargs):
         """
-        Generate the report for Aviary core geometry analysis
+        Generate the report for Aviary core geometry analysis.
 
         Parameters
         ----------
@@ -156,18 +156,18 @@ class CoreGeometryBuilder(GeometryBuilderBase):
 
         # TODO output differs by method
         # TODO finish variables of interest
-        wing_outputs = [Aircraft.Wing.AREA,
-                        Aircraft.Wing.SPAN,
-                        Aircraft.Wing.ASPECT_RATIO,
-                        Aircraft.Wing.SWEEP]
-        htail_outputs = [Aircraft.HorizontalTail.AREA,
-                         Aircraft.VerticalTail.AREA]
-        fuselage_outputs = [Aircraft.Fuselage.LENGTH,
-                            Aircraft.Fuselage.AVG_DIAMETER]
+        wing_outputs = [
+            Aircraft.Wing.AREA,
+            Aircraft.Wing.SPAN,
+            Aircraft.Wing.ASPECT_RATIO,
+            Aircraft.Wing.SWEEP,
+        ]
+        htail_outputs = [Aircraft.HorizontalTail.AREA, Aircraft.VerticalTail.AREA]
+        fuselage_outputs = [Aircraft.Fuselage.LENGTH, Aircraft.Fuselage.AVG_DIAMETER]
 
         with open(filepath, mode='w') as f:
             if self.use_both_geometries:
-                method = ('FLOPS and GASP methods')
+                method = 'FLOPS and GASP methods'
             else:
                 method = self.code_origin.value + ' method'
             f.write(f'# Geometry: {method}\n')

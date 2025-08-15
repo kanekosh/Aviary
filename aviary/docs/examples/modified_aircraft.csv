@@ -32,7 +32,7 @@ aircraft:design:zero_lift_drag_coeff_factor,0.930890028006548,unitless
 aircraft:electrical:mass_scaler,1.25,unitless
 aircraft:engine:additional_mass_fraction,0.,unitless
 aircraft:engine:constant_fuel_consumption,0.,lbm/h
-aircraft:engine:data_file,models/engines/turbofan_28k.deck,unitless
+aircraft:engine:data_file,models/engines/turbofan_28k.csv,unitless
 aircraft:engine:flight_idle_thrust_fraction,0.0,unitless
 aircraft:engine:flight_idle_max_fraction,1.0,unitless
 aircraft:engine:flight_idle_min_fraction,0.08,unitless
@@ -119,6 +119,7 @@ aircraft:wing:chord_per_semispan,0.31,0.23,0.084,unitless
 aircraft:wing:composite_fraction,0.2,unitless
 aircraft:wing:control_surface_area,137,ft**2
 aircraft:wing:control_surface_area_ratio,0.1,unitless
+aircraft:wing:detailed_wing,True,unitless
 aircraft:wing:glove_and_bat,134.0,ft**2
 aircraft:wing:input_station_dist,0.,0.2759,0.9367,unitless
 aircraft:wing:load_distribution_control,2.0,unitless
@@ -153,4 +154,5 @@ mission:takeoff:fuel_simple,577,lbm
 mission:takeoff:lift_coefficient_max,3.0,unitless
 mission:takeoff:lift_over_drag,17.354,unitless
 settings:equations_of_motion,height_energy
+settings:aerodynamics_method,FLOPS
 settings:mass_method,FLOPS

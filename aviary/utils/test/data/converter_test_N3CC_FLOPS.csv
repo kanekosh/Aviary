@@ -119,6 +119,7 @@ aircraft:wing:bwb_aft_body_mass_scaler,1.0,unitless
 aircraft:wing:chord_per_semispan,0.273522534166506,0.204274849507037,0.0888152947868224,0.0725353313595661,unitless
 aircraft:wing:composite_fraction,0.33333,unitless
 aircraft:wing:control_surface_area_ratio,0.333,unitless
+aircraft:wing:detailed_wing,True,unitless
 aircraft:wing:dihedral,6.0,deg
 aircraft:wing:glove_and_bat,0.0,ft**2
 aircraft:wing:input_station_dist,0.0,0.34453777998,0.919,1.0,unitless
@@ -165,6 +166,7 @@ mission:takeoff:rolling_friction_coefficient,0.0175,unitless
 mission:takeoff:spoiler_drag_coefficient,0.085,unitless
 mission:takeoff:spoiler_lift_coefficient,-0.81,unitless
 mission:takeoff:thrust_incidence,0.0,deg
+settings:aerodynamics_method,FLOPS
 settings:equations_of_motion,height_energy
 settings:mass_method,FLOPS
 
@@ -186,6 +188,7 @@ CONFIN.htvc,1
 CONFIN.pglov,0
 CONFIN.plr,0.0,0.0,0.0,0.0,0.0,0.0
 CONFIN.rotvel,0.0,0.0,0.0,0.0,0.0,0.0
+CONFIN.twr,0.0
 CONFIN.varth,0.0,0.0,0.0,0.0,0.0,0.0
 CONFIN.vtvc,1
 CONFIN.wsr,0

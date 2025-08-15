@@ -1,18 +1,17 @@
 import numpy as np
 import openmdao.api as om
 from openmdao.utils import cs_safe as cs
-import os
 
-from aviary.variable_info.functions import add_aviary_input, add_aviary_output
-from aviary.variable_info.variables import Aircraft, Dynamic, Mission
 from aviary.constants import GRAV_ENGLISH_GASP
+from aviary.variable_info.functions import add_aviary_input
+from aviary.variable_info.variables import Aircraft, Dynamic
 
 FCFWC = 1  # Excrescence drag factor
 FCFWT = 1  # Aero technology factors for wing
 
 
 class RootChord(om.ExplicitComponent):
-    """Calculates the wing root chord"""
+    """Calculates the wing root chord."""
 
     def setup(self):
         add_aviary_input(self, Aircraft.Wing.AREA)
@@ -48,7 +47,7 @@ class CommonVariables(om.ExplicitComponent):
     """
     Calculates the wing_thickness_over_fuselage_diameter and an
     intermediate reference variable that maps the wing attachment
-    location from -1 (bottom of fuselage) to +1 (top of fuselage)
+    location from -1 (bottom of fuselage) to +1 (top of fuselage).
     """
 
     def setup(self):
@@ -86,7 +85,7 @@ class CommonVariables(om.ExplicitComponent):
 
 
 class TopAndBottomWidth(om.ExplicitComponent):
-    """Calculates the fuselage width at the top and bottom"""
+    """Calculates the fuselage width at the top and bottom."""
 
     def setup(self):
         self.add_input('ZW_RF')
@@ -145,7 +144,7 @@ class TopAndBottomWidth(om.ExplicitComponent):
 
 
 class BodyRatios(om.ExplicitComponent):
-    """Calculates some intermediate variables that are based on unitless ratios"""
+    """Calculates some intermediate variables that are based on unitless ratios."""
 
     def setup(self):
         self.add_input('WBODYWF')
@@ -201,7 +200,7 @@ class BodyRatios(om.ExplicitComponent):
 class InterferenceDrag(om.ExplicitComponent):
     """
     Calculates the interference_independent_of_shielded_area and
-    drag_loss_due_to_shielded_wing_area
+    drag_loss_due_to_shielded_wing_area.
     """
 
     def setup(self):
@@ -213,12 +212,8 @@ class InterferenceDrag(om.ExplicitComponent):
         add_aviary_input(self, Aircraft.Fuselage.AVG_DIAMETER)
         add_aviary_input(self, Aircraft.Wing.CENTER_DISTANCE)
 
-        self.add_output(
-            'interference_independent_of_shielded_area', 1.23456, units='unitless'
-        )
-        self.add_output(
-            'drag_loss_due_to_shielded_wing_area', 1.23456, units='unitless'
-        )
+        self.add_output('interference_independent_of_shielded_area', 1.23456, units='unitless')
+        self.add_output('drag_loss_due_to_shielded_wing_area', 1.23456, units='unitless')
 
     def compute(self, inputs, outputs):
         WBODYWF, CROOT, TCBODYWF, CBODYWF, ZW_RF, SWF, XWQLF = inputs.values()
@@ -226,13 +221,7 @@ class InterferenceDrag(om.ExplicitComponent):
         # factor due to vertical location
         KVWF = 0.0194 - 0.14817 * ZW_RF + 1.3515 * ZW_RF**2
         # factor due to longitudinal location
-        KLWF = (
-            0.13077
-            + 1.9791 * XWQLF
-            + 3.3325 * XWQLF**2
-            - 10.095 * XWQLF**3
-            + 4.7229 * XWQLF**4
-        )
+        KLWF = 0.13077 + 1.9791 * XWQLF + 3.3325 * XWQLF**2 - 10.095 * XWQLF**3 + 4.7229 * XWQLF**4
         # factor due to fuselage diameter / thickness
         KDTWF = 0.73543 + 0.028571 * SWF / (TCBODYWF * CBODYWF)
 
@@ -269,16 +258,8 @@ class InterferenceDrag(om.ExplicitComponent):
 
         KVWF = 0.0194 - 0.14817 * ZW_RF + 1.3515 * ZW_RF**2
         dKVWF_dZWRF = -0.14817 + 2 * 1.3515 * ZW_RF
-        KLWF = (
-            0.13077
-            + 1.9791 * XWQLF
-            + 3.3325 * XWQLF**2
-            - 10.095 * XWQLF**3
-            + 4.7229 * XWQLF**4
-        )
-        dKLWF_dXWQLF = (
-            1.9791 + 2 * 3.3325 * XWQLF - 3 * 10.095 * XWQLF**2 + 4 * 4.7229 * XWQLF**3
-        )
+        KLWF = 0.13077 + 1.9791 * XWQLF + 3.3325 * XWQLF**2 - 10.095 * XWQLF**3 + 4.7229 * XWQLF**4
+        dKLWF_dXWQLF = 1.9791 + 2 * 3.3325 * XWQLF - 3 * 10.095 * XWQLF**2 + 4 * 4.7229 * XWQLF**3
         KDTWF = 0.73543 + 0.028571 * SWF / (TCBODYWF * CBODYWF)
         dKDTWF_dSWF = 0.028571 / (TCBODYWF * CBODYWF)
         # dKDTWF_dTCBODYWF = -.028571*SWF/(TCBODYWF*CBODYWF)**2
@@ -293,21 +274,17 @@ class InterferenceDrag(om.ExplicitComponent):
             * (3 * 0.73543 * TCBODYWF + 2 * 0.028571 * SWF / CBODYWF)
         )
         J['interference_independent_of_shielded_area', 'CBODYWF'] = (
-            1.5
-            * (TCBODYWF**3)
-            * KVWF
-            * KLWF
-            * (2 * 0.73543 * CBODYWF + 0.028571 * SWF / TCBODYWF)
+            1.5 * (TCBODYWF**3) * KVWF * KLWF * (2 * 0.73543 * CBODYWF + 0.028571 * SWF / TCBODYWF)
         )
         J['interference_independent_of_shielded_area', 'ZW_RF'] = (
             1.5 * (TCBODYWF**3) * (CBODYWF**2) * dKVWF_dZWRF * KLWF * KDTWF
         )
-        J[
-            'interference_independent_of_shielded_area', Aircraft.Wing.CENTER_DISTANCE
-        ] = (1.5 * (TCBODYWF**3) * (CBODYWF**2) * KVWF * dKLWF_dXWQLF * KDTWF)
-        J[
-            'interference_independent_of_shielded_area', Aircraft.Fuselage.AVG_DIAMETER
-        ] = (1.5 * (TCBODYWF**3) * (CBODYWF**2) * KVWF * KLWF * dKDTWF_dSWF)
+        J['interference_independent_of_shielded_area', Aircraft.Wing.CENTER_DISTANCE] = (
+            1.5 * (TCBODYWF**3) * (CBODYWF**2) * KVWF * dKLWF_dXWQLF * KDTWF
+        )
+        J['interference_independent_of_shielded_area', Aircraft.Fuselage.AVG_DIAMETER] = (
+            1.5 * (TCBODYWF**3) * (CBODYWF**2) * KVWF * KLWF * dKDTWF_dSWF
+        )
 
         J['drag_loss_due_to_shielded_wing_area', 'CROOT'] = 0.5 * WBODYWF
         J['drag_loss_due_to_shielded_wing_area', 'CBODYWF'] = 0.5 * WBODYWF
@@ -324,9 +301,7 @@ class WingFuselageInterferencePremission(om.Group):
     """
 
     def setup(self):
-        self.add_subsystem(
-            'root_chord', RootChord(), promotes_inputs=['*'], promotes_outputs=['*']
-        )
+        self.add_subsystem('root_chord', RootChord(), promotes_inputs=['*'], promotes_outputs=['*'])
         self.add_subsystem(
             'common_variables',
             CommonVariables(),
@@ -353,14 +328,14 @@ class WingFuselageInterferencePremission(om.Group):
 class WingFuselageInterferenceMission(om.ExplicitComponent):
     """
     This calculates an additional flat plate drag area due to general aerodynamic interference for wing-fuselage interference
-    (based on results from Hoerner's drag)
+    (based on results from Hoerner's drag).
     """
 
     def initialize(self):
-        self.options.declare("num_nodes", default=1, types=int)
+        self.options.declare('num_nodes', default=1, types=int)
 
     def setup(self):
-        nn = self.options["num_nodes"]
+        nn = self.options['num_nodes']
 
         add_aviary_input(self, Aircraft.Wing.FORM_FACTOR)
         add_aviary_input(self, Aircraft.Wing.AVERAGE_CHORD)
@@ -373,7 +348,7 @@ class WingFuselageInterferenceMission(om.ExplicitComponent):
         self.add_output('wing_fuselage_interference_flat_plate_equivalent', shape=nn)
 
     def setup_partials(self):
-        nn = self.options["num_nodes"]
+        nn = self.options['num_nodes']
         arange = np.arange(nn)
         self.declare_partials(
             'wing_fuselage_interference_flat_plate_equivalent',
@@ -406,9 +381,7 @@ class WingFuselageInterferenceMission(om.ExplicitComponent):
 
         # from gaspmain.f
         # reli = reynolds number per foot
-        RELI = (
-            np.sqrt(1.4 * GRAV_ENGLISH_GASP * 53.32) * EM * np.sqrt(T0) / XKV
-        )  # dynamic
+        RELI = np.sqrt(1.4 * GRAV_ENGLISH_GASP * 53.32) * EM * np.sqrt(T0) / XKV  # dynamic
 
         # from aero.f
         # CFIN CALCULATION FROM SCHLICHTING PG. 635-665
@@ -434,9 +407,7 @@ class WingFuselageInterferenceMission(om.ExplicitComponent):
         J[
             'wing_fuselage_interference_flat_plate_equivalent',
             Aircraft.Wing.FORM_FACTOR,
-        ] = (
-            -CDWI * ((np.log10(RELI * CBARW) / 7.0) ** (-2.6)) * AREASHIELDWF
-        )
+        ] = -CDWI * ((np.log10(RELI * CBARW) / 7.0) ** (-2.6)) * AREASHIELDWF
         J[
             'wing_fuselage_interference_flat_plate_equivalent',
             Aircraft.Wing.AVERAGE_CHORD,
@@ -449,9 +420,7 @@ class WingFuselageInterferenceMission(om.ExplicitComponent):
             * 1
             / (np.log(10) * (CBARW) * 7)
         )
-        J[
-            'wing_fuselage_interference_flat_plate_equivalent', Dynamic.Atmosphere.MACH
-        ] = (
+        J['wing_fuselage_interference_flat_plate_equivalent', Dynamic.Atmosphere.MACH] = (
             -CKW
             * AREASHIELDWF
             * (
@@ -500,6 +469,4 @@ class WingFuselageInterferenceMission(om.ExplicitComponent):
         J[
             'wing_fuselage_interference_flat_plate_equivalent',
             'interference_independent_of_shielded_area',
-        ] = (
-            -CDWI * CKW * ((np.log10(RELI * CBARW) / 7.0) ** (-2.6))
-        )
+        ] = -CDWI * CKW * ((np.log10(RELI * CBARW) / 7.0) ** (-2.6))

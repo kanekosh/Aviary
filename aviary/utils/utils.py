@@ -1,30 +1,28 @@
 """
 A home for helper functions that are used in multiple files in aviary/utils
-Helps to avoid circular imports. These functions do not rely on imports from other
-utility files.
+Helps to avoid circular imports. These functions do not rely on imports from other utility files.
 """
 
-from enum import Enum
 from copy import deepcopy
+from enum import Enum
 
 import numpy as np
-
 from openmdao.utils.units import convert_units
+
 from aviary.variable_info.variable_meta_data import _MetaData
 
 
 def isiterable(val, valid_iterables: tuple = (list, np.ndarray, tuple)):
     """
-    Checks if provided value is an iterable, as defined by the _valid_iterables global
-    variable
+    Checks if provided value is an iterable, as defined by the _valid_iterables global variable.
 
     Parameters
     ----------
     val : any object
         The object that will be checked if it is a supported iterable type
     valid_iterables : tuple of types
-        Which iterable types val will be checked against. By default, lists, numpy arrays
-        and tuples are supported types
+        Which iterable types val will be checked against. By default, lists, numpy arrays and tuples
+        are supported types
     """
     return isinstance(val, valid_iterables)
 
@@ -36,8 +34,7 @@ def wrapped_convert_units(val_unit_tuple, new_units):
     Parameters
     ----------
     val_unit_tuple : tuple
-        Tuple of the form (value, units) where value is a float and units is a
-        string.
+        Tuple of the form (value, units) where value is a float and units is a string.
     new_units : str
         New units to convert to.
 
@@ -61,7 +58,9 @@ def wrapped_convert_units(val_unit_tuple, new_units):
             istuple = False
 
         for i, item in enumerate(value):
-            value[i] = convert_units(item, units, new_units)
+            # Any entry may be none.
+            if value[i] is not None:
+                value[i] = convert_units(item, units, new_units)
 
         if istuple:
             value = tuple(value)
@@ -73,8 +72,7 @@ def wrapped_convert_units(val_unit_tuple, new_units):
 
 def enum_setter(opt_meta, value):
     """
-    Support setting the option with a string or int and converting it to the
-    proper enum object.
+    Support setting the option with a string or int and converting it to the proper enum object.
 
     Parameters
     ----------
@@ -145,16 +143,16 @@ def enum_setter(opt_meta, value):
 
 def check_type(key, val, meta_data=_MetaData):
     """
-    Check that provided val is the correct type. If val is iterable, also check each
-    individual index
+    Check that provided val is the correct type. If val is iterable, also check each individual
+    index.
     """
 
     def _flatten_iters(iterable):
-        """Flattens iterables of any type and dimension"""
+        """Recursively flattens iterables of any type and dimension."""
         for item in iterable:
-            try:
-                yield from iter(item)
-            except TypeError:
+            if isiterable(item):
+                yield from _flatten_iters(item)
+            else:
                 yield item
 
     # make a copy of val, so we do not modify it
@@ -165,8 +163,7 @@ def check_type(key, val, meta_data=_MetaData):
         return
 
     # If data is iterable, check that it is allowed to be.
-    # Variables flagged multivalue can be lists or numpy arrays even if not specified
-    # in `types`
+    # Variables flagged multivalue can be lists or numpy arrays even if not specified in `types`
     if isiterable(input_val):
         types = expected_types
         if meta_data[key]['multivalue']:
@@ -196,16 +193,14 @@ def check_type(key, val, meta_data=_MetaData):
         input_val = _flatten_iters(input_val)
 
     for item in input_val:
-        has_bool = (
-            False  # needs some fancy shenanigans because bools will register as ints
-        )
+        has_bool = False  # needs some fancy shenanigans because bools will register as ints
         if isinstance(expected_types, type):
             if expected_types is bool:
                 has_bool = True
         elif bool in expected_types:
             has_bool = True
         if (not isinstance(item, expected_types)) or (
-            (has_bool == False) and (isinstance(item, bool))
+            (has_bool is False) and (isinstance(item, bool))
         ):
             raise TypeError(
                 f'{key} is of type(s) {meta_data[key]["types"]} but you '
@@ -215,9 +210,9 @@ def check_type(key, val, meta_data=_MetaData):
 
 def cast_type(key, val, meta_data=_MetaData):
     """
-    Attempts to cast val into an accepted type in meta_data. If a valid type cast is
-    found, val is changed to that type. If no compatible type is found, val is returned
-    as is. Typing preference given by order of types defined in meta_data.
+    Attempts to cast val into an accepted type in meta_data. If a valid type cast is found, val is
+    changed to that type. If no compatible type is found, val is returned as is. Typing preference
+    given by order of types defined in meta_data.
     """
     if key not in meta_data:
         return val
@@ -232,8 +227,7 @@ def cast_type(key, val, meta_data=_MetaData):
     # them (e.g. cast int to float).
     if not isinstance(cast_val, expected_types):
         # Prefer casting to Enum if possible
-        # Special handling to access an Enum member from either the member name
-        # or its value.
+        # Special handling to access an Enum member from either the member name or its value.
         is_enum = False
         for _type in expected_types:
             if issubclass(_type, Enum):
@@ -248,11 +242,8 @@ def cast_type(key, val, meta_data=_MetaData):
                         if isinstance(cast_val, np.ndarray):
                             cast_val = np.array([_type(item) for item in cast_val])
                         else:
-                            cast_val = type(cast_val)(
-                                [_type(item) for item in cast_val]
-                            )
-                    # Don't cast things to bool, most types will convert and we
-                    # don't actually want that
+                            cast_val = type(cast_val)([_type(item) for item in cast_val])
+                    # Don't cast things to bool, most types will convert
                     elif _type is not bool:
                         if _type is np.ndarray:
                             cast_val = np.array([cast_val])

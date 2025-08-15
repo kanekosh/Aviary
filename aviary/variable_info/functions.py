@@ -1,18 +1,17 @@
 from enum import Enum
-from copy import deepcopy
-import numpy as np
 
-import openmdao.api as om
-from openmdao.core.component import Component
 import dymos as dm
+import numpy as np
+import openmdao.api as om
 from dymos.utils.misc import _unspecified
+from openmdao.core.component import Component
 
 from aviary.utils.aviary_options_dict import units_setter
 from aviary.utils.aviary_values import AviaryValues
-from aviary.variable_info.variables import Aircraft, Settings
-from aviary.variable_info.variable_meta_data import _MetaData
+from aviary.utils.utils import cast_type, check_type, enum_setter, wrapped_convert_units
 from aviary.variable_info.enums import Verbosity
-from aviary.utils.utils import enum_setter, wrapped_convert_units, check_type, cast_type
+from aviary.variable_info.variable_meta_data import _MetaData
+from aviary.variable_info.variables import Aircraft, Settings
 
 # ---------------------------
 # Helper functions for setting up inputs/outputs in components
@@ -95,6 +94,8 @@ def add_aviary_input(
     val = cast_type(varname, val, meta_data)
     check_type(varname, val, meta_data)
 
+    primal_name = varname.replace(':', '__')
+
     comp.add_input(
         varname,
         val=val,
@@ -102,6 +103,7 @@ def add_aviary_input(
         desc=desc,
         shape_by_conn=shape_by_conn,
         shape=shape,
+        primal_name=primal_name,
     )
 
 
@@ -132,7 +134,7 @@ def add_aviary_output(
         (Optional) Default value for variable. If not specified, the value from metadata
         is used.
     units: str
-        (Optional) when speficying val, units should also be specified.
+        (Optional) when specifying val, units should also be specified.
     desc: str
         (Optional) description text for the variable.
     shape_by_conn: bool
@@ -182,18 +184,19 @@ def add_aviary_output(
     val = cast_type(varname, val, meta_data)
     check_type(varname, val, meta_data)
 
+    primal_name = varname.replace(':', '__')
+
     comp.add_output(
         varname,
         val=val,
         units=units,
         desc=desc,
         shape_by_conn=shape_by_conn,
+        primal_name=primal_name,
     )
 
 
-def add_aviary_option(
-    comp, name, val=_unspecified, units=None, desc=None, meta_data=_MetaData
-):
+def add_aviary_option(comp, name, val=_unspecified, units=None, desc=None, meta_data=_MetaData):
     """
     Adds an option to an Aviary component. Default values from the metadata are used
     unless a new value is specified.
@@ -269,9 +272,7 @@ def add_aviary_option(
         )
 
     elif isinstance(val, Enum):
-        comp.options.declare(
-            name, default=val, types=types, desc=desc, set_function=enum_setter
-        )
+        comp.options.declare(name, default=val, types=types, desc=desc, set_function=enum_setter)
 
     else:
         comp.options.declare(name, default=val, types=types, desc=desc)
@@ -283,17 +284,17 @@ def override_aviary_vars(
     manual_overrides=None,
     external_overrides=None,
 ):
-    '''
+    """
     This function provides the capability to override output variables
     with variables from the aviary_inputs input. The user can also
     optionally provide the names of variables that they would like to
     override manually. (Manual overriding is simply suppressing the
     promotion of the variable to make way for another output variable
-    of the same name, or to create an unconnected input elsewhere.)
-    '''
+    of the same name, or to create an unconnected input elsewhere.).
+    """
 
     def name_filter(name):
-        return "aircraft:" in name or "mission:" in name
+        return 'aircraft:' in name or 'mission:' in name
 
     if not manual_overrides:
         manual_overrides = []
@@ -305,7 +306,7 @@ def override_aviary_vars(
     # so that we can keep track of any unclaimed inputs
     all_inputs = set()  # use a set to avoid duplicates
     for system in group.system_iter():
-        meta = system.get_io_metadata(iotypes=("input",))
+        meta = system.get_io_metadata(iotypes=('input',))
         in_var_names = meta.keys()
         for name in in_var_names:
             all_inputs.add(name)
@@ -317,14 +318,12 @@ def override_aviary_vars(
         out_var_names = list(
             filter(
                 name_filter,
-                comp.get_io_metadata(iotypes=("output",), return_rel_names=False),
+                comp.get_io_metadata(iotypes=('output',), return_rel_names=False),
             )
         )
         # get a list of the metadata associated with each variable
-        out_var_metadata = comp.get_io_metadata(
-            iotypes=("output",), return_rel_names=False
-        )
-        in_var_names = filter(name_filter, comp.get_io_metadata(iotypes=("input",)))
+        out_var_metadata = comp.get_io_metadata(iotypes=('output',), return_rel_names=False)
+        in_var_names = filter(name_filter, comp.get_io_metadata(iotypes=('input',)))
 
         comp_promoted_outputs = []
 
@@ -336,9 +335,8 @@ def override_aviary_vars(
                 continue
 
             elif name in external_overrides:
-
                 # Overridden variables are given a new name
-                comp_promoted_outputs.append((name, f"EXTERNAL_OVERRIDE:{name}"))
+                comp_promoted_outputs.append((name, f'EXTERNAL_OVERRIDE:{name}'))
                 external_overridden_outputs.append(name)
 
                 continue  # don't promote it
@@ -349,44 +347,36 @@ def override_aviary_vars(
                     group.set_input_defaults(name, val=val, units=units)
 
                 # Overridden variables are given a new name
-                comp_promoted_outputs.append((name, f"AUTO_OVERRIDE:{name}"))
+                comp_promoted_outputs.append((name, f'AUTO_OVERRIDE:{name}'))
                 overridden_outputs.append(name)
 
                 continue  # don't promote it
 
-            # This variable is not overriden, so the output is promoted.
+            # This variable is not overridden, so the output is promoted.
             comp_promoted_outputs.append(name)
 
         # NOTE Always promoting all inputs into the "global" namespace
         # so its VERY important that we enforce all inputs names exist in the master
         # variable list
-        rel_path = comp.pathname[len(group.pathname):].lstrip(".")
-        if "." in rel_path:
+        rel_path = comp.pathname[len(group.pathname) :].lstrip('.')
+        if '.' in rel_path:
             # comp is in a subgroup. We must find it.
-            sub_path = ".".join(rel_path.split(".")[:-1])
+            sub_path = '.'.join(rel_path.split('.')[:-1])
             sub = group._get_subsystem(sub_path)
             sub.promotes(comp.name, inputs=in_var_names, outputs=comp_promoted_outputs)
         else:
-            group.promotes(
-                comp.name, inputs=in_var_names, outputs=comp_promoted_outputs
-            )
+            group.promotes(comp.name, inputs=in_var_names, outputs=comp_promoted_outputs)
 
     if overridden_outputs:
-        if (
-            aviary_inputs.get_val(Settings.VERBOSITY).value >= Verbosity.VERBOSE
-        ):  # VERBOSE, DEBUG
-            print("\nThe following variables have been overridden:")
+        if aviary_inputs.get_val(Settings.VERBOSITY).value >= Verbosity.VERBOSE:  # VERBOSE, DEBUG
+            print('\nThe following variables have been overridden:')
             for prom_name in sorted(overridden_outputs):
                 val, units = aviary_inputs.get_item(prom_name)
                 print(f"  '{prom_name}  {val}  {units}")
 
     if external_overridden_outputs:
-        if (
-            aviary_inputs.get_val(Settings.VERBOSITY).value >= Verbosity.VERBOSE
-        ):  # VERBOSE, DEBUG
-            print(
-                "\nThe following variables have been overridden by an external subsystem:"
-            )
+        if aviary_inputs.get_val(Settings.VERBOSITY).value >= Verbosity.VERBOSE:  # VERBOSE, DEBUG
+            print('\nThe following variables have been overridden by an external subsystem:')
             for prom_name in sorted(external_overridden_outputs):
                 # do not print values because they will be updated by an external subsystem later.
                 print(f"  '{prom_name}")
@@ -438,7 +428,6 @@ def setup_trajectory_params(
     # TODO: As we use more builders, we may reach the point where we don't need
     # to do these anymore.
     for key in sorted(variables_to_add):
-
         if key in already_added:
             continue
 
@@ -512,7 +501,6 @@ def extract_options(aviary_inputs: AviaryValues, metadata=_MetaData) -> dict:
     """
     options = {}
     for key, meta in metadata.items():
-
         if key not in aviary_inputs:
             continue
 
@@ -526,7 +514,7 @@ def extract_options(aviary_inputs: AviaryValues, metadata=_MetaData) -> dict:
             options[key] = val
 
         else:
-            # Implement as (quanitity, unit)
+            # Implement as (quantity, unit)
             options[key] = (val, units)
 
     return options
@@ -556,7 +544,6 @@ def setup_model_options(
     prefix : str
         Prefix for model options. Used for multi-mission.
     """
-
     # Use OpenMDAO's model options to pass all options through the system hierarchy.
     prob.model_options[f'{prefix}*'] = extract_options(aviary_inputs, meta_data)
 
@@ -567,10 +554,12 @@ def setup_model_options(
         # No engine data.
         return
 
-    if num_engine_models > 1:
+    # TODO: Modify this method for multi mission/model.
+    aviary_group = prob.model
 
+    if num_engine_models > 1:
         if engine_models is None:
-            engine_models = prob.engine_builders
+            engine_models = aviary_group.engine_builders
 
         for idx in range(num_engine_models):
             eng_name = engine_models[idx].name
@@ -594,5 +583,5 @@ def setup_model_options(
                 val, units = aviary_inputs.get_item(key)
                 opts[key] = (val[idx], units)
 
-            path = f"{prefix}*core_propulsion.{eng_name}*"
+            path = f'{prefix}*core_propulsion.{eng_name}*'
             prob.model_options[path] = opts

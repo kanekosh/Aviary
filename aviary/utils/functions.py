@@ -1,30 +1,22 @@
-from typing import Union
-from pathlib import Path
-import importlib_resources
-from contextlib import ExitStack
 import atexit
+from contextlib import ExitStack
 import os
+from pathlib import Path
+from typing import Union
+import warnings
 
-import openmdao.api as om
+import importlib_resources
 import numpy as np
+import openmdao.api as om
 
 from aviary.utils.aviary_values import AviaryValues, get_items
-from aviary.variable_info.enums import (
-    FlapType,
-    GASPEngineType,
-    ProblemType,
-    EquationsOfMotion,
-    LegacyCode,
-)
-from aviary.variable_info.functions import add_aviary_output, add_aviary_input
-from aviary.variable_info.variable_meta_data import _MetaData
 from aviary.variable_info.enums import Verbosity
+from aviary.variable_info.functions import add_aviary_input, add_aviary_output
+from aviary.variable_info.variable_meta_data import _MetaData
 
 
 class Null:
-    """
-    This can be used to divert outputs, such as stdout, to improve performance
-    """
+    """This can be used to divert outputs, such as stdout, to improve performance."""
 
     def write(self, *args, **kwargs):
         pass
@@ -33,7 +25,7 @@ class Null:
         pass
 
 
-def get_aviary_resource_path(resource_name: str) -> str:
+def get_aviary_resource_path(resource_name: str) -> Path:
     """
     Get the file path of a resource in the Aviary package.
 
@@ -43,8 +35,8 @@ def get_aviary_resource_path(resource_name: str) -> str:
             The name of the resource.
 
     Returns
-    ----------
-        Path
+    -------
+        path : Path
             The file path of the resource.
 
     """
@@ -83,9 +75,7 @@ def set_aviary_initial_values(prob, aviary_inputs: AviaryValues):
             continue
 
 
-def set_aviary_input_defaults(
-    model, inputs, aviary_inputs: AviaryValues, meta_data=_MetaData
-):
+def set_aviary_input_defaults(model, inputs, aviary_inputs: AviaryValues, meta_data=_MetaData):
     """
     This function sets the default values and units for any inputs prior to
     setup. This is needed to resolve ambiguities when inputs are promoted
@@ -98,7 +88,7 @@ def set_aviary_input_defaults(
     model : System
         Top level aviary model.
     inputs : list
-        List of varibles that are causing promotion problems. This needs to
+        List of variables that are causing promotion problems. This needs to
         be crafted based on the openmdao exception messages.
     aviary_inputs : AviaryValues
         Instance of AviaryValues containing all initial values.
@@ -120,7 +110,7 @@ def convert_strings_to_data(input_string):
     """
     convert_strings_to_data will convert a string or list of strings to usable data.
     Strings that can't be converted to numbers will attempt to store as a boolean,
-    otherwise they are passed as is
+    otherwise they are passed as is.
     """
     # pack input_string into a list if it is not
     # setup output list size
@@ -182,9 +172,7 @@ def create_opts2vals(all_options: list, output_units: dict = {}):
     def configure_output(option_name: str, aviary_options: AviaryValues):
         option_data = aviary_options.get_item(option_name)
         out_units = (
-            output_units[option_name]
-            if option_name in output_units.keys()
-            else option_data[1]
+            output_units[option_name] if option_name in output_units.keys() else option_data[1]
         )
         return {'val': option_data[0], 'units': out_units}
 
@@ -198,9 +186,7 @@ def create_opts2vals(all_options: list, output_units: dict = {}):
 
         def setup(self):
             for option_name in all_options:
-                output_data = configure_output(
-                    option_name, self.options['aviary_options']
-                )
+                output_data = configure_output(option_name, self.options['aviary_options'])
                 add_aviary_output(
                     self,
                     option_name,
@@ -212,9 +198,11 @@ def create_opts2vals(all_options: list, output_units: dict = {}):
             aviary_options: AviaryValues = self.options['aviary_options']
             for option_name in all_options:
                 output_data = configure_output(option_name, aviary_options)
-                outputs[option_name] = aviary_options.get_val(
-                    option_name, units=output_data['units']
-                )
+                # uses default value if not present
+                if option_name in aviary_options:
+                    outputs[option_name] = aviary_options.get_val(
+                        option_name, units=output_data['units']
+                    )
 
     return OptionsToValues
 
@@ -250,15 +238,11 @@ def add_opts2vals(Group: om.Group, OptionsToValues, aviary_options: AviaryValues
             )
 
         def setup(self):
-            self.add_subsystem(
-                'options_to_values', OptionsToValues(aviary_options=aviary_options)
-            )
+            self.add_subsystem('options_to_values', OptionsToValues(aviary_options=aviary_options))
 
         def configure(self):
             all_output_data = self.options_to_values.list_outputs(out_stream=None)
-            list_of_outputs = [
-                (name, 'option:' + name) for name, data in all_output_data
-            ]
+            list_of_outputs = [(name, 'option:' + name) for name, data in all_output_data]
             self.promotes('options_to_values', list_of_outputs)
 
     Group.add_subsystem(
@@ -268,9 +252,7 @@ def add_opts2vals(Group: om.Group, OptionsToValues, aviary_options: AviaryValues
     return Group
 
 
-def create_printcomp(
-    all_inputs: list, input_units: dict = {}, meta_data=_MetaData, num_nodes=1
-):
+def create_printcomp(all_inputs: list, input_units: dict = {}, meta_data=_MetaData, num_nodes=1):
     """
     Creates a component that prints the value of all inputs.
 
@@ -300,33 +282,24 @@ def create_printcomp(
             return None
 
     class PrintComp(om.ExplicitComponent):
-
         def setup(self):
             for variable_name in all_inputs:
                 units = get_units(variable_name)
                 if ':' in variable_name:
                     try:
-                        add_aviary_input(
-                            self, variable_name, units=units, shape=num_nodes
-                        )
+                        add_aviary_input(self, variable_name, units=units, shape=num_nodes)
                     except TypeError:
-                        self.add_input(
-                            variable_name, units=units, shape=num_nodes, val=1.23456
-                        )
+                        self.add_input(variable_name, units=units, shape=num_nodes, val=1.23456)
                 else:
                     # using an arbitrary number that will stand out for unconnected
                     # variables
-                    self.add_input(
-                        variable_name, units=units, shape=num_nodes, val=1.23456
-                    )
+                    self.add_input(variable_name, units=units, shape=num_nodes, val=1.23456)
 
         def compute(self, inputs, outputs):
             print_string = ['v' * 20]
             for variable_name in all_inputs:
                 units = get_units(variable_name)
-                print_string.append(
-                    '{} {} {}'.format(variable_name, inputs[variable_name], units)
-                )
+                print_string.append('{} {} {}'.format(variable_name, inputs[variable_name], units))
             print_string.append('^' * 20)
             print('\n'.join(print_string))
 
@@ -334,18 +307,22 @@ def create_printcomp(
 
 
 def promote_aircraft_and_mission_vars(group):
-    """
-    Promotes inputs and outputs in Aircraft and Mission hierarchy categories for provided group.
-    """
+    """Promotes inputs and outputs in Aircraft and Mission hierarchy categories for provided group."""
     external_outputs = []
     for comp in group.system_iter(recurse=False):
-
         # Skip all aviary systems.
         if comp.name == 'core_subsystems':
             continue
 
-        out_names = [item for item in comp._var_allprocs_prom2abs_list['output']]
-        in_names = [item for item in comp._var_allprocs_prom2abs_list['input']]
+        try:
+            resolver = comp._resolver
+            out_names = [item for item in resolver.prom_iter(iotype='output')]
+            in_names = [item for item in resolver.prom_iter(iotype='input')]
+
+        except AttributeError:
+            # This is an older version of OpenMDAO
+            out_names = [item for item in comp._var_allprocs_prom2abs_list['output']]
+            in_names = [item for item in comp._var_allprocs_prom2abs_list['input']]
 
         external_outputs.extend(out_names)
 
@@ -401,7 +378,6 @@ def get_path(path: Union[str, Path], verbosity=Verbosity.BRIEF) -> Path:
     FileNotFoundError
         If the path is not found in any of the prioritized locations.
     """
-
     # Store the original path for reference in error messages.
     original_path = path
 
@@ -420,7 +396,7 @@ def get_path(path: Union[str, Path], verbosity=Verbosity.BRIEF) -> Path:
         if verbosity > Verbosity.BRIEF:  # VERBOSE, DEBUG
             print(
                 f"Unable to locate '{original_path}' as an absolute or relative path. "
-                "Trying Aviary package path."
+                'Trying Aviary package path.'
             )
         # Determine the path relative to the Aviary package.
         aviary_based_path = Path(get_aviary_resource_path(original_path))
@@ -432,7 +408,7 @@ def get_path(path: Union[str, Path], verbosity=Verbosity.BRIEF) -> Path:
         if verbosity > Verbosity.BRIEF:
             print(
                 f"Unable to locate '{aviary_based_path}' as an Aviary package path, "
-                "checking built-in models"
+                'checking built-in models'
             )
         try:
             hangar_based_path = get_model(original_path)
@@ -456,7 +432,7 @@ def get_path(path: Union[str, Path], verbosity=Verbosity.BRIEF) -> Path:
 
 
 def get_model(file_name: str, verbosity=Verbosity.BRIEF) -> Path:
-    '''
+    """
     This function attempts to find the path to a file or folder in aviary/models
     If the path cannot be found in any of the locations, a FileNotFoundError is raised.
 
@@ -474,32 +450,38 @@ def get_model(file_name: str, verbosity=Verbosity.BRIEF) -> Path:
     ------
     FileNotFoundError
         If the path is not found.
-    '''
-
-    # Get the path to Aviary's models
-    path = Path('models', file_name)
-    aviary_path = Path(get_aviary_resource_path(str(path)))
-
-    # If the file name was provided without a path, check in the subfolders
-    if not aviary_path.exists():
-        sub_dirs = [x[0] for x in os.walk(get_aviary_resource_path('models'))]
-        for sub_dir in sub_dirs:
-            temp_path = Path(sub_dir, file_name)
-            if temp_path.exists():
-                # only return the first matching file
-                aviary_path = temp_path
-                continue
-
-    # If the path still doesn't exist, raise an error.
-    if not aviary_path.exists():
-        raise FileNotFoundError(f"File or Folder not found in Aviary's hangar")
-
-    return aviary_path
-
-
-def sigmoidX(x, x0, alpha=1.0):
     """
-    Sigmoid used to smoothly transition between piecewise functions
+    # Get the path to Aviary's models
+    aviary_path = Path(get_aviary_resource_path(str(Path('models', file_name))))
+    # Check if provided path is valid
+    if aviary_path.exists():
+        return aviary_path
+    # otherwise check models folder contents
+    else:
+        from glob import glob
+
+        contents = glob(str(get_aviary_resource_path('models') / '**'), recursive=True)
+        close_match = None
+        for item in contents:
+            item = Path(item)
+            # check if full filepath, file name with extension, or just file (or folder) name
+            # matches target
+            if aviary_path == item or aviary_path.name == item.name:
+                return item
+            elif aviary_path.stem == item.stem:
+                close_match = item
+
+    if close_match is not None:
+        # Probably requested the wrong file extension.
+        return close_match
+
+    # If the path doesn't exist, raise an error.
+    raise FileNotFoundError("File or Folder not found in Aviary's hangar")
+
+
+def sigmoidX(x, x0, mu=1.0):
+    """
+    Sigmoid used to smoothly transition between piecewise functions.
 
     Parameters
     ----------
@@ -507,16 +489,16 @@ def sigmoidX(x, x0, alpha=1.0):
         independent variable
     x0: float
         the center of symmetry. When x = x0, sigmoidX = 1/2.
-    alpha: float
+    mu: float
         steepness parameter.
 
-    returns
+    Returns
     -------
     float or array
         smoothed value from input parameter x.
     """
-    if alpha == 0:
-        raise ValueError("alpha must be non-zero")
+    if mu == 0:
+        raise ValueError('mu must be non-zero')
 
     if isinstance(x, np.ndarray):
         if np.isrealobj(x):
@@ -526,24 +508,24 @@ def sigmoidX(x, x0, alpha=1.0):
         n_size = x.size
         y = np.zeros(n_size, dtype=dtype)
         # avoid overflow in squared term, underflow seems to be ok
-        calc_idx = np.where((x.real - x0) / alpha > -320)
-        y[calc_idx] = 1 / (1 + np.exp(-(x[calc_idx] - x0) / alpha))
+        calc_idx = np.where((x.real - x0) / mu > -320)
+        y[calc_idx] = 1 / (1 + np.exp(-(x[calc_idx] - x0) / mu))
     else:
         if isinstance(x, float):
             dtype = float
         else:
             dtype = complex
         y = 0
-        if (x - x0) * alpha > -320:
-            y = 1 / (1 + np.exp(-(x - x0) / alpha))
+        if (x - x0) * mu > -320:
+            y = 1 / (1 + np.exp(-(x - x0) / mu))
     if dtype == float:
         y = y.real
     return y
 
 
-def dSigmoidXdx(x, x0, alpha=1.0):
+def dSigmoidXdx(x, x0, mu=1.0):
     """
-    Derivative of sigmoid function
+    Derivative of sigmoid function.
 
     Parameters
     ----------
@@ -551,15 +533,16 @@ def dSigmoidXdx(x, x0, alpha=1.0):
         independent variable
     x0: float
         the center of symmetry. When x = x0, sigmoidX = 1/2.
-    alpha: float
+    mu: float
         steepness parameter.
-    returns
+
+    Returns
     -------
     float or array
         smoothed derivative value from input parameter x.
     """
-    if alpha == 0:
-        raise ValueError("alpha must be non-zero")
+    if mu == 0:
+        raise ValueError('mu must be non-zero')
 
     if isinstance(x, np.ndarray):
         if np.isrealobj(x):
@@ -571,16 +554,92 @@ def dSigmoidXdx(x, x0, alpha=1.0):
         term = np.zeros(n_size, dtype=dtype)
         term2 = np.zeros(n_size, dtype=dtype)
         # avoid overflow in squared term, underflow seems to be ok
-        calc_idx = np.where((x.real - x0) / alpha > -320)
-        term[calc_idx] = np.exp(-(x[calc_idx] - x0) / alpha)
+        calc_idx = np.where((x.real - x0) / mu > -320)
+        term[calc_idx] = np.exp(-(x[calc_idx] - x0) / mu)
         term2[calc_idx] = (1 + term[calc_idx]) * (1 + term[calc_idx])
-        y[calc_idx] = term[calc_idx] / alpha / term2[calc_idx]
+        y[calc_idx] = term[calc_idx] / mu / term2[calc_idx]
     else:
         y = 0
-        if (x - x0) * alpha > -320:
-            term = np.exp(-(x - x0) / alpha)
+        if (x - x0) * mu > -320:
+            term = np.exp(-(x - x0) / mu)
             term2 = (1 + term) * (1 + term)
-            y = term / alpha / term2
+            y = term / mu / term2
     if dtype == float:
         y = y.real
     return y
+
+
+def smooth_min(x, b, mu=100.0):
+    """
+    Smooth approximation of the min function using the log-sum-exp trick.
+
+    Parameters:
+    x (float or array-like): First value.
+    b (float or array-like): Second value.
+    mu (float): The smoothing factor. Higher values make it closer to the true minimum. Try between 75 and 275.
+
+    Returns:
+    float or array-like: The smooth approximation of min(x, b).
+    """
+    sum_log_exp = np.log(np.exp(np.multiply(-mu, x)) + np.exp(np.multiply(-mu, b)))
+    rv = -(1 / mu) * sum_log_exp
+    return rv
+
+
+def d_smooth_min(x, b, mu=100.0):
+    """
+    Derivative of function smooth_min(x)
+
+    Parameters:
+    x (float or array-like): First value.
+    b (float or array-like): Second value.
+    mu (float): The smoothing factor. Higher values make it closer to the true minimum. Try between 75 and 275.
+
+    Returns:
+    float or array-like: The smooth approximation of derivative of min(x, b).
+    """
+    d_sum_log_exp = np.exp(np.multiply(-mu, x)) / (
+        np.exp(np.multiply(-mu, x)) + np.exp(np.multiply(-mu, b))
+    )
+    return d_sum_log_exp
+
+
+def smooth_max(x, b, mu=10.0):
+    """
+    Smooth approximation of the min function using the log-sum-exp trick.
+
+    Parameters:
+    x (float or array-like): First value.
+    b (float or array-like): Second value.
+    mu (float): The smoothing factor. Higher values make it closer to the true maximum. Try between 75 and 275.
+
+    Returns:
+    float or array-like: The smooth approximation of max(x, b).
+    """
+    mu_x = mu * x
+    mu_b = mu * b
+    m = np.maximum(mu_x, mu_b)
+    sum_log_exp = (m + np.log(np.exp(mu_x - m) + np.exp(mu_b - m))) / mu
+
+    return sum_log_exp
+
+
+def d_smooth_max(x, b, mu=10.0):
+    """
+    Derivative of function smooth_min(x)
+
+    Parameters:
+    x (float or array-like): First value.
+    b (float or array-like): Second value.
+    mu (float): The smoothing factor. Higher values make it closer to the true minimum. Try between 75 and 275.
+
+    Returns:
+    float or array-like: The smooth approximation of derivative of min(x, b).
+    """
+    mu_x = mu * x
+    mu_b = mu * b
+    m = np.maximum(mu_x, mu_b)
+    numerator = np.exp(mu_x - m)
+    denominator = np.exp(mu_x - m) + np.exp(mu_b - m)
+    d_sum_log_exp = mu * numerator / denominator
+    return d_sum_log_exp

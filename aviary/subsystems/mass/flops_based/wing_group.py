@@ -1,4 +1,3 @@
-import numpy as np
 import openmdao.api as om
 
 from aviary.subsystems.mass.flops_based.engine_pod import EnginePodMass
@@ -15,18 +14,15 @@ from aviary.variable_info.variables import Aircraft
 
 
 class WingMassGroup(om.Group):
-    """
-    Group of components used for FLOPS-based wing mass computation.
-    """
+    """Group of components used for FLOPS-based wing mass computation."""
 
     def initialize(self):
         # TODO this requires a special workaround in
         #      variable_info/functions.py, add_aviary_output()
         # default to None instead of default value
-        add_aviary_option(self, Aircraft.Wing.INPUT_STATION_DIST, None)
+        add_aviary_option(self, Aircraft.Wing.DETAILED_WING)
 
     def setup(self):
-
         self.add_subsystem(
             'engine_pod_mass',
             EnginePodMass(),
@@ -34,7 +30,7 @@ class WingMassGroup(om.Group):
             promotes_outputs=['*'],
         )
 
-        if self.options[Aircraft.Wing.INPUT_STATION_DIST] is not None:
+        if self.options[Aircraft.Wing.DETAILED_WING]:
             self.add_subsystem(
                 'wing_bending_material_factor',
                 DetailedWingBendingFact(),

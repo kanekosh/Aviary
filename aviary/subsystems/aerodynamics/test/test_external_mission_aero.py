@@ -1,5 +1,5 @@
-from copy import deepcopy
 import unittest
+from copy import deepcopy
 
 from openmdao.utils.assert_utils import assert_near_equal
 from openmdao.utils.testing_utils import require_pyoptsparse, use_tempdirs
@@ -11,7 +11,7 @@ phase_info = deepcopy(av.default_height_energy_phase_info)
 
 
 @use_tempdirs
-class TestBattery(av.TestSubsystemBuilderBase):
+class TestExternalAero(av.TestSubsystemBuilderBase):
     """
     Test replacing internal drag calculation with an external subsystem.
 
@@ -19,9 +19,8 @@ class TestBattery(av.TestSubsystemBuilderBase):
     subsystems in mission are correctly promoting inputs/outputs.
     """
 
-    @require_pyoptsparse(optimizer="IPOPT")
+    @require_pyoptsparse(optimizer='IPOPT')
     def test_external_drag(self):
-
         # Just do cruise in this example.
         phase_info.pop('climb')
         phase_info.pop('descent')
@@ -39,7 +38,7 @@ class TestBattery(av.TestSubsystemBuilderBase):
         prob = av.AviaryProblem()
 
         # Load aircraft and options data from user
-        prob.load_inputs('models/test_aircraft/aircraft_for_bench_FwFm.csv', phase_info)
+        prob.load_inputs('models/aircraft/test_aircraft/aircraft_for_bench_FwFm.csv', phase_info)
 
         prob.check_and_preprocess_inputs()
         prob.add_pre_mission_systems()
@@ -49,7 +48,7 @@ class TestBattery(av.TestSubsystemBuilderBase):
         prob.link_phases()
 
         # SLSQP didn't work so well here.
-        prob.add_driver("IPOPT")
+        prob.add_driver('IPOPT')
 
         prob.add_design_variables()
         prob.add_objective()
@@ -60,8 +59,8 @@ class TestBattery(av.TestSubsystemBuilderBase):
 
         prob.run_aviary_problem(suppress_solver_print=True)
 
-        drag = prob.get_val("traj.cruise.rhs_all.drag", units='lbf')
-        assert_near_equal(drag[0], 7272.0265, tolerance=1e-3)
+        drag = prob.get_val('traj.cruise.rhs_all.drag', units='lbf')
+        assert_near_equal(drag[0], 5540.7442556, tolerance=1e-3)
 
 
 if __name__ == '__main__':

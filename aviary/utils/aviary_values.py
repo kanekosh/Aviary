@@ -1,4 +1,4 @@
-'''
+"""
 Define utilities for using aviary values with associated units and testing
 for compatibility with aviary metadata dictionary.
 
@@ -15,25 +15,26 @@ OptionalValueAndUnits : type alias
 
 class AviaryValues
     define a collection of named values with associated units
-'''
+"""
 
-from enum import Enum
-
-import numpy as np
 from openmdao.utils.units import convert_units as _convert_units
 
 from aviary.utils.named_values import NamedValues, get_items, get_keys, get_values
+from aviary.utils.utils import cast_type, check_type
 from aviary.variable_info.variable_meta_data import _MetaData
-from aviary.utils.utils import check_type, cast_type
+
+# TODO: workaround to avoid unused imports - a better solution is desired such as utils or making
+#       get_*() methods of NamedValues
+get_items = get_items
+get_keys = get_keys
+get_values = get_values
 
 
 class AviaryValues(NamedValues):
-    '''
-    Define a collection of aviary values with associated units and aviary tests.
-    '''
+    """Define a collection of aviary values with associated units and aviary tests."""
 
     def set_val(self, key, val, units='unitless', meta_data=_MetaData):
-        '''
+        """
         Update the named value and its associated units.
 
         Note, specifying units of `None` or units of any type other than `str` will raise
@@ -54,7 +55,7 @@ class AviaryValues(NamedValues):
         ------
         TypeError
             if units of `None` were specified or units of any type other than `str`
-        '''
+        """
         if key in meta_data:
             val = cast_type(key, val, meta_data)
             check_type(key, val, meta_data)
@@ -66,7 +67,7 @@ class AviaryValues(NamedValues):
     def _check_units_compatibility(self, key, val, units, meta_data=_MetaData):
         """
         Check that the two provided units are compatible - we don't actually want to
-        convert here, just verify that the provided units are allowed
+        convert here, just verify that the provided units are allowed.
         """
         expected_units = meta_data[key]['units']
 
@@ -75,9 +76,7 @@ class AviaryValues(NamedValues):
             # convert the units
             _convert_units(10, expected_units, units)
         except ValueError:
-            raise ValueError(
-                f'The units {units} which you have provided for {key} are invalid.'
-            )
+            raise ValueError(f'The units {units} which you have provided for {key} are invalid.')
         except TypeError:
             raise TypeError(
                 f'The base units of {key} are {expected_units}, and you have tried to '

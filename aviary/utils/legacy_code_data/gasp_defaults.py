@@ -73,7 +73,7 @@ gasp_default_values = NamedValues(
         'INGASP.DELWST': (0, 'lbm'),
         'INGASP.DFLPLD': (40, 'deg'),
         'INGASP.DFLPTO': (10, 'deg'),
-        'INGASP.DIAM_REF': (5.8, 'ft'),
+        'INGASP.DIAM_REF': (5.8, 'ft'),  # no DIAM_REF in GASP
         'INGASP.DLMC4': (25, 'deg'),
         'INGASP.DNQDE': (1, 'unitless'),
         'INGASP.DV1': (5, 'kn'),
@@ -87,8 +87,8 @@ gasp_default_values = NamedValues(
         'INGASP.ENP': (2, 'unitless'),
         'INGASP.EYEW': (1.5, 'deg'),
         'INGASP.FLAPN': (1, 'unitless'),
-        'INGASP.FN_REF': (28690, 'lbf'),
-        'INGASP.FPYL': (0.7, 'unitless'),
+        'INGASP.FN_REF': (28690, 'lbf'),  # no FN_REF in GASP
+        'INGASP.FPYL': (0.7, 'unitless'),  # 0.0 in GASP
         'INGASP.FRESF': (4998, 'lbm'),
         'INGASP.FUELD': (6.687, 'lbm/galUS'),
         'INGASP.FVOL_MRG': (0, 'unitless'),
@@ -111,7 +111,7 @@ gasp_default_values = NamedValues(
         'INGASP.SAH': (0, 'unitless'),
         'INGASP.SCFAC': (0, 'unitless'),
         'INGASP.SF_FAC': (1, 'unitless'),
-        'INGASP.SHT': (0, 'ft**2'),
+        #'INGASP.SHT': (0, 'ft**2'),
         'INGASP.SINKTD': (3, 'ft/s'),
         'INGASP.SKB': (136, 'unitless'),
         'INGASP.SKCC': (11, 'unitless'),
@@ -134,7 +134,7 @@ gasp_default_values = NamedValues(
         'INGASP.SSTQSW': (0, 'unitless'),
         'INGASP.STATIC': (0.05, 'unitless'),
         'INGASP.STRUT': (0, 'ft'),
-        'INGASP.SVT': (0, 'ft**2'),
+        #'INGASP.SVT': (0, 'ft**2'),
         'INGASP.SWSLS': (0, 'lbm/lbf'),
         'INGASP.TCHT': (0.12, 'unitless'),
         'INGASP.TCR': (0.15, 'unitless'),

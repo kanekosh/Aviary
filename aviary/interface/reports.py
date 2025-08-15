@@ -1,24 +1,23 @@
 import datetime
 import json
-from pathlib import Path
 import sys
 import time
-import pandas as pd
-import numpy as np
+from pathlib import Path
 
+import numpy as np
+import pandas as pd
 from openmdao.utils.mpi import MPI
 from openmdao.utils.reports_system import register_report
-from openmdao.visualization.tables.table_builder import generate_table
 
-from aviary.interface.utils.markdown_utils import write_markdown_variable_table
-from aviary.utils.utils import wrapped_convert_units
+from aviary.interface.utils import write_markdown_variable_table
 from aviary.utils.named_values import NamedValues
+from aviary.utils.utils import wrapped_convert_units
 
 
 def register_custom_reports():
     """
     Registers Aviary reports with OpenMDAO, so they are automatically generated and
-    added to the same reports folder as other default reports
+    added to the same reports folder as other default reports.
     """
     # TODO top-level aircraft report?
     # TODO add flag to skip registering reports?
@@ -27,7 +26,7 @@ def register_custom_reports():
     register_report(
         name='subsystems',
         func=subsystem_report,
-        desc='Generates reports for each subsystem builder in the ' 'Aviary Problem',
+        desc='Generates reports for each subsystem builder in the Aviary Problem',
         class_name='AviaryProblem',
         method='run_driver',
         pre_or_post='post',
@@ -73,7 +72,7 @@ def register_custom_reports():
 
 def run_status(prob):
     """
-    Creates a JSON file that containts high level overview of the run
+    Creates a JSON file that contains high level overview of the run.
 
     Parameters
     ----------
@@ -89,12 +88,12 @@ def run_status(prob):
     runtime = prob.driver.result.runtime
     runtime_ms = (runtime * 1000.0) % 1000.0
     runtime_formatted = (
-        f"{time.strftime('%H hours %M minutes %S seconds', time.gmtime(runtime))} "
-        f"{runtime_ms:.1f} milliseconds"
+        f'{time.strftime("%H hours %M minutes %S seconds", time.gmtime(runtime))} '
+        f'{runtime_ms:.1f} milliseconds'
     )
 
     t = datetime.datetime.now()
-    time_stamp = t.strftime("%Y-%m-%d %H:%M:%S %Z")
+    time_stamp = t.strftime('%Y-%m-%d %H:%M:%S %Z')
 
     status = {}
     status['Problem'] = prob._name
@@ -115,7 +114,7 @@ def run_status(prob):
 def subsystem_report(prob, **kwargs):
     """
     Loops through all subsystem builders in the AviaryProblem calls their write_report
-    method. All generated report files are placed in the "reports/subsystem_reports" folder
+    method. All generated report files are placed in the "reports/subsystem_reports" folder.
 
     Parameters
     ----------
@@ -126,7 +125,7 @@ def subsystem_report(prob, **kwargs):
     reports_folder.mkdir(exist_ok=True)
 
     # TODO external subsystems??
-    core_subsystems = prob.core_subsystems
+    core_subsystems = prob.model.core_subsystems  # TODO: redo for multimissions
 
     for subsystem in core_subsystems.values():
         subsystem.report(prob, reports_folder, **kwargs)
@@ -134,7 +133,7 @@ def subsystem_report(prob, **kwargs):
 
 def mission_report(prob, **kwargs):
     """
-    Creates a basic mission summary report that is placed in the "reports" folder
+    Creates a basic mission summary report that is placed in the "reports" folder.
 
     Parameters
     ----------
@@ -145,7 +144,7 @@ def mission_report(prob, **kwargs):
     def _get_phase_value(traj, phase, var_name, units, indices=None):
         try:
             vals = prob.get_val(
-                f"{traj}.{phase}.timeseries.{var_name}",
+                f'{traj}.{phase}.timeseries.{var_name}',
                 units=units,
                 indices=indices,
                 get_remote=True,
@@ -153,7 +152,7 @@ def mission_report(prob, **kwargs):
         except KeyError:
             try:
                 vals = prob.get_val(
-                    f"{traj}.{phase}.{var_name}",
+                    f'{traj}.{phase}.{var_name}',
                     units=units,
                     indices=indices,
                     get_remote=True,
@@ -161,7 +160,7 @@ def mission_report(prob, **kwargs):
             # 2DOF breguet range cruise uses time integration to track mass
             except TypeError:
                 vals = prob.get_val(
-                    f"{traj}.{phase}.timeseries.time",
+                    f'{traj}.{phase}.timeseries.time',
                     units=units,
                     indices=indices,
                     get_remote=True,
@@ -187,7 +186,7 @@ def mission_report(prob, **kwargs):
 
     # read per-phase data from trajectory
     data = {}
-    for idx, phase in enumerate(prob.phase_info):
+    for idx, phase in enumerate(prob.model.phase_info):  # TODO: redo for multimissions
         # TODO for traj in trajectories, currently assuming single one named "traj"
         # TODO delta mass and fuel consumption need to be tracked separately
         fuel_burn = _get_phase_diff('traj', phase, 'mass', 'lbm', [-1, 0])
@@ -263,12 +262,28 @@ def input_check_report(prob, **kwargs):
     report_file = reports_folder / 'input_checks.md'
 
     model = prob.model
-    abs2prom = model._var_allprocs_abs2prom['input']
-    prom2abs = model._var_allprocs_prom2abs_list['input']
+
+    # a change in OpenMDAO 3.38.1-dev adds a resolver in place of the prom2abs/abs2prom attributes
+    try:
+        resolver = model._resolver
+
+        def prom2abs(prom_name):
+            return resolver.absnames(prom_name, 'input')
+
+        def abs2prom(abs_name):
+            return resolver.abs2prom(abs_name, 'input')
+
+    except AttributeError:
+
+        def prom2abs(prom_name):
+            return model._var_allprocs_prom2abs_list['input'][prom_name]
+
+        def abs2prom(abs_name):
+            return model._var_allprocs_abs2prom['input'][abs_name]
 
     # Find all unconnected inputs.
     all_ivc_abs = [k for k, v in model._conn_abs_in2out.items() if 'ivc' in v]
-    all_ivc_prom = [abs2prom[v] for v in all_ivc_abs]
+    all_ivc_prom = [abs2prom(v) for v in all_ivc_abs]
 
     aviary_metadata = prob.meta_data
     aviary_inputs = prob.aviary_inputs
@@ -283,15 +298,13 @@ def input_check_report(prob, **kwargs):
         return
 
     with open(report_file, mode='w') as f:
-
         f.write('# Unspecified Hierarchy Variables\n')
         f.write(
-            "These aviary inputs are unspecified in aviary_inputs, and may be using default values "
-            "defined in the Aviary metadata.\n\n"
+            'These aviary inputs are unspecified in aviary_inputs, and may be using default values '
+            'defined in the Aviary metadata.\n\n'
         )
 
         if bare_hierarchy_inputs:
-
             f.write('| Name | Value | Units | Description | Absolute Paths\n')
             f.write('| :- |  :- |  :- | :- | :- |\n')
 
@@ -299,44 +312,42 @@ def input_check_report(prob, **kwargs):
                 metadata = aviary_metadata.get(var)
                 units = metadata['units']
                 val = model.get_val(var, units=units)
-                desc = metadata["desc"]
-                abs_paths = prom2abs[var]
+                desc = metadata['desc']
+                abs_paths = prom2abs(var)
 
                 f.write(f'| **{var}** | {val} | {units} | {desc} | {abs_paths}|\n')
 
-            f.write("\n")
+            f.write('\n')
 
         else:
-            f.write("None\n")
+            f.write('None\n')
 
         f.write('# Unspecified Local Variables\n')
         f.write(
-            "These local subsystem inputs are unconnected, and may be using default "
-            "values specified in the component.\n\n"
+            'These local subsystem inputs are unconnected, and may be using default '
+            'values specified in the component.\n\n'
         )
 
         if bare_local_inputs:
-
             f.write('| Name | Value | Units | Absolute Paths\n')
             f.write('| :- |  :- |  :- | :- |\n')
 
             for var in sorted(bare_local_inputs):
-
                 # Filter out dymos internals.
                 if var.startswith('traj') and '.rhs_all.' not in var:
                     continue
 
-                abs_paths = prom2abs[var]
+                abs_paths = prom2abs(var)
                 val = model.get_val(var)
                 meta = model._var_allprocs_abs2meta['input'][abs_paths[0]]
                 units = meta['units']
 
                 f.write(f'| **{var}** | {val} | {units} | {abs_paths}|\n')
 
-            f.write("\n\n")
+            f.write('\n\n')
 
         else:
-            f.write("None")
+            f.write('None')
 
 
 def timeseries_csv(prob, **kwargs):
@@ -368,14 +379,10 @@ def timeseries_csv(prob, **kwargs):
     if MPI and MPI.COMM_WORLD.rank != 0:
         return
 
-    timeseries_outputs = {
-        value['prom_name']: value for key, value in timeseries_outputs.items()
-    }
+    timeseries_outputs = {value['prom_name']: value for key, value in timeseries_outputs.items()}
 
     timeseries_outputs = {
-        key: value
-        for key, value in timeseries_outputs.items()
-        if not key.endswith('_phase')
+        key: value for key, value in timeseries_outputs.items() if not key.endswith('_phase')
     }
 
     unique_variable_names = set(
