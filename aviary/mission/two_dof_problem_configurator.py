@@ -465,6 +465,15 @@ class TwoDOFProblemConfigurator(ProblemConfiguratorBase):
                     phase1, phase2, 'mass', 'mass', connected=False, ref=1.0e5
                 )
 
+                # This isn't computed, but is instead set in the cruise phase_info.
+                # We still need altitude continuity.
+                # Note: if both sides are Breguet Range, the user is doing something odd like a
+                # step cruise, so don't enforce a constraint.
+                if not (analytic1 and analytic2):
+                    aviary_group.traj.add_linkage_constraint(
+                        phase1, phase2, 'altitude', 'altitude', connected=False, ref=1.0e4
+                    )
+
         # add all params and promote them to aviary_group level
         ParamPort.promote_params(
             aviary_group,
@@ -502,23 +511,11 @@ class TwoDOFProblemConfigurator(ProblemConfiguratorBase):
             src_indices=[-1],
         )
 
-        connect_map = {
-            f'traj.{aviary_group.regular_phases[-1]}.timeseries.distance': Mission.Summary.RANGE,
-        }
-
         # promote all ParamPort inputs for analytic segments as well
         param_list = list(ParamPort.param_data)
         aviary_group.promotes('taxi', inputs=param_list)
         aviary_group.promotes('landing', inputs=param_list)
         aviary_group.connect('taxi.mass', 'vrot.mass')
-
-        for source, target in connect_map.items():
-            aviary_group.connect(
-                source,
-                target,
-                src_indices=[-1],
-                flat_src_indices=True,
-            )
 
         if 'ascent' in aviary_group.phase_info:
             self._add_groundroll_eq_constraint(aviary_group)

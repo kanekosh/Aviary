@@ -31,7 +31,7 @@ phase_info = {
             'throttle_enforcement': 'control',
             'throttle_optimize': True,
             'time_initial': (0.0, 's'),
-            'time_initial_bounds': ((0.0, 0.0), 'min'),
+            'time_initial': (0.0, 'min'),
             'time_duration_bounds': ((32.0, 128.0), 'min'),
         },
         'initial_guesses': {
@@ -129,9 +129,9 @@ class OptimizeThrottleTestCase(unittest.TestCase):
 
         prob.setup()
 
-        prob.set_initial_guesses()
-
         prob.run_aviary_problem(simulate=False, optimization_history_filename='z.sql')
+
+        self.assertTrue(prob.result.success)
 
         gross_mass = prob.get_val(Mission.Summary.GROSS_MASS, units='lbm')
         assert_near_equal(gross_mass, 160689.0, tolerance=1e-3)

@@ -71,10 +71,8 @@ class MultiengineTestcase(unittest.TestCase):
         prob.load_inputs(inputs, test_phase_info, engine_builders=[engine1, engine2])
 
         prob.check_and_preprocess_inputs()
-        prob.add_pre_mission_systems()
-        prob.add_phases()
-        prob.add_post_mission_systems()
-        prob.link_phases()
+
+        prob.build_model()
 
         prob.add_driver('SNOPT', max_iter=50, use_coloring=True)
 
@@ -82,9 +80,10 @@ class MultiengineTestcase(unittest.TestCase):
         prob.add_objective()
 
         prob.setup()
-        prob.set_initial_guesses()
 
         prob.run_aviary_problem('dymos_solution.db', suppress_solver_print=True)
+
+        self.assertTrue(prob.result.success)
 
         alloc_climb = prob.get_val('traj.climb.parameter_vals:throttle_allocations')
         alloc_cruise = prob.get_val('traj.cruise.parameter_vals:throttle_allocations')
@@ -111,10 +110,8 @@ class MultiengineTestcase(unittest.TestCase):
         prob.load_inputs(inputs, test_phase_info, engine_builders=[engine1, engine2])
 
         prob.check_and_preprocess_inputs()
-        prob.add_pre_mission_systems()
-        prob.add_phases()
-        prob.add_post_mission_systems()
-        prob.link_phases()
+
+        prob.build_model()
 
         prob.add_driver('SNOPT', max_iter=50, use_coloring=True)
 
@@ -122,7 +119,6 @@ class MultiengineTestcase(unittest.TestCase):
         prob.add_objective()
 
         prob.setup()
-        prob.set_initial_guesses()
 
         prob.run_aviary_problem('dymos_solution.db', suppress_solver_print=True)
 
@@ -150,10 +146,8 @@ class MultiengineTestcase(unittest.TestCase):
         prob.load_inputs(inputs, test_phase_info, engine_builders=[engine1, engine2])
 
         prob.check_and_preprocess_inputs()
-        prob.add_pre_mission_systems()
-        prob.add_phases()
-        prob.add_post_mission_systems()
-        prob.link_phases()
+
+        prob.build_model()
 
         prob.add_driver('SNOPT', max_iter=50, use_coloring=True)
 
@@ -161,7 +155,6 @@ class MultiengineTestcase(unittest.TestCase):
         prob.add_objective()
 
         prob.setup()
-        prob.set_initial_guesses()
 
         prob.run_aviary_problem('dymos_solution.db', suppress_solver_print=True)
 

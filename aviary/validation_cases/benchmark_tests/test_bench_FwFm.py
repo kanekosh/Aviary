@@ -122,7 +122,7 @@ class ProblemPhaseTestCase(unittest.TestCase):
                     'altitude_bounds': ((0.0, 35000.0), 'ft'),
                     'altitude_optimize': True,
                     'throttle_enforcement': 'path_constraint',
-                    'time_initial_bounds': ((0.0, 2.0), 'min'),
+                    'time_initial': (0.0, 'min'),
                     'time_duration_bounds': ((20.0, 60.0), 'min'),
                     'no_descent': True,
                 },
@@ -202,6 +202,7 @@ class TestBenchFwFmSerial(ProblemPhaseTestCase):
             optimizer='IPOPT',
         )
 
+        # self.assertTrue(prob.result.success)
         compare_against_expected_values(prob, self.expected_dict)
 
     @require_pyoptsparse(optimizer='SNOPT')
@@ -214,6 +215,7 @@ class TestBenchFwFmSerial(ProblemPhaseTestCase):
             optimizer='SNOPT',
         )
 
+        # self.assertTrue(prob.result.success)
         compare_against_expected_values(prob, self.expected_dict)
 
         # This is one of the few places we test Height Energy + simple takeoff.
@@ -238,7 +240,7 @@ class TestBenchFwFmParallel(ProblemPhaseTestCase):
             max_iter=50,
             optimizer='SNOPT',
         )
-
+        # self.assertTrue(prob.result.success)
         compare_against_expected_values(prob, self.expected_dict)
 
 
