@@ -48,7 +48,7 @@ class EnergyODE(_BaseODE):
             atmos_model = aviary_options.get_val('aircraft:model_fidelity:atmosphere')
         except KeyError:
             atmos_model = None
-        if atmos_model.lower() == 'openconcept':
+        if atmos_model is not None and atmos_model.lower() == 'openconcept':
             # import custom atmosphere model
             from finch.subsystems.atmosphere.custom_atmosphere import CustomAtmosphereGroup
 
