@@ -43,7 +43,24 @@ class EnergyODE(_BaseODE):
         aviary_options = options['aviary_options']
         num_engine_type = len(aviary_options.get_val(Aircraft.Engine.NUM_ENGINES))
 
-        self.add_atmosphere(input_speed_type=SpeedType.MACH)
+        # use custom atmosphere model if specified
+        try:
+            atmos_model = aviary_options.get_val('aircraft:model_fidelity:atmosphere')
+        except KeyError:
+            atmos_model = None
+        if atmos_model.lower() == 'openconcept':
+            # import custom atmosphere model
+            from finch.subsystems.atmosphere.custom_atmosphere import CustomAtmosphereGroup
+
+            self.add_subsystem(
+                'atmosphere',
+                CustomAtmosphereGroup(
+                    num_nodes=nn, aviary_options=aviary_options, input_speed_type=SpeedType.MACH
+                ),
+                promotes=['*'],
+            )
+        else:
+            self.add_atmosphere(input_speed_type=SpeedType.MACH)
 
         # add execcomp to compute velocity_rate based off mach_rate and sos
         self.add_subsystem(
