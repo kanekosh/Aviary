@@ -48,7 +48,7 @@ class EnergyODE(_BaseODE):
             atmos_model = aviary_options.get_val('aircraft:model_fidelity:atmosphere')
         except KeyError:
             atmos_model = None
-        if atmos_model is not None and atmos_model.lower() == 'openconcept':
+        if atmos_model is not None:
             # import custom atmosphere model
             from finch.subsystems.atmosphere.custom_atmosphere import CustomAtmosphereGroup
 
@@ -94,11 +94,21 @@ class EnergyODE(_BaseODE):
 
         ext_needs_solver = self.add_external_subsystems(solver_group=sub1)
 
+        # modify atmosphere-to-mission_EOM velocity connection if considering wind
+        velocity_in_prom = Dynamic.Mission.VELOCITY  # default original promotion
+        try:
+            wind_model = aviary_options.get_val('aircraft:model_fidelity:wind')
+            if wind_model is not None:
+                # promote EoM's velocity to a different name
+                velocity_in_prom = (Dynamic.Mission.VELOCITY, 'velocity_mag_earth_frame')
+        except KeyError:
+            pass
+
         sub1.add_subsystem(
             name='mission_EOM',
             subsys=MissionEOM(num_nodes=nn),
             promotes_inputs=[
-                Dynamic.Mission.VELOCITY,
+                velocity_in_prom,
                 Dynamic.Vehicle.MASS,
                 Dynamic.Vehicle.Propulsion.THRUST_MAX_TOTAL,
                 Dynamic.Vehicle.DRAG,
