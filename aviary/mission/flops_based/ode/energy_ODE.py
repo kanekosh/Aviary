@@ -43,7 +43,24 @@ class EnergyODE(_BaseODE):
         aviary_options = options['aviary_options']
         num_engine_type = len(aviary_options.get_val(Aircraft.Engine.NUM_ENGINES))
 
-        self.add_atmosphere(input_speed_type=SpeedType.MACH)
+        # use custom atmosphere model if specified
+        if 'aircraft:model_fidelity:atmosphere' in aviary_options:
+            atmos_model = aviary_options.get_val('aircraft:model_fidelity:atmosphere')
+        else:
+            atmos_model = None
+        if atmos_model is not None:
+            # import custom atmosphere model
+            from finch.subsystems.atmosphere.custom_atmosphere import CustomAtmosphereGroup
+
+            self.add_subsystem(
+                'atmosphere',
+                CustomAtmosphereGroup(
+                    num_nodes=nn, aviary_options=aviary_options, input_speed_type=SpeedType.MACH
+                ),
+                promotes=['*'],
+            )
+        else:
+            self.add_atmosphere(input_speed_type=SpeedType.MACH)
 
         # add execcomp to compute velocity_rate based off mach_rate and sos
         self.add_subsystem(
@@ -77,11 +94,19 @@ class EnergyODE(_BaseODE):
 
         ext_needs_solver = self.add_external_subsystems(solver_group=sub1)
 
+        # modify atmosphere-to-mission_EOM velocity connection if considering wind
+        velocity_in_prom = Dynamic.Mission.VELOCITY  # default original promotion
+        if 'aircraft:model_fidelity:wind' in aviary_options:
+            wind_model = aviary_options.get_val('aircraft:model_fidelity:wind')
+            if wind_model is not None:
+                # promote EoM's velocity to a different name
+                velocity_in_prom = (Dynamic.Mission.VELOCITY, 'velocity_mag_earth_frame')
+
         sub1.add_subsystem(
             name='mission_EOM',
             subsys=MissionEOM(num_nodes=nn),
             promotes_inputs=[
-                Dynamic.Mission.VELOCITY,
+                velocity_in_prom,
                 Dynamic.Vehicle.MASS,
                 Dynamic.Vehicle.Propulsion.THRUST_MAX_TOTAL,
                 Dynamic.Vehicle.DRAG,
